@@ -1,0 +1,56 @@
+spring:
+  application:
+    name: cloud-gateway
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          enabled: true
+          lowerCaseServiceId: true
+      routes:
+      - id: 163                     #网关路由到网易官网
+        uri: http://www.163.com/
+        predicates:
+        - Path=/163/**
+      - id: query_route
+        uri: http://httpbin.org:80/get
+        predicates:
+          - Query=username, zzz* # 请求参数含有username,且值满足zzz开头的,则转发(对值的匹配可以省略)
+        filters:
+        - AddRequestHeader=X-Request-Foo, Bar
+        - AddRequestParameter=age, 18
+      - id: header_route
+        uri: http://httpbin.org:80/get
+        predicates:
+        - Header=request, \d+ # 如果请求头含有request,且为数字,则转发
+      - id: cookie_route
+        uri: http://httpbin.org:80/get
+        predicates:
+        - Cookie=name, zzzgd # 如果携带cookie,参数名为name,值为zzzgd,则转发
+      - id: path_route
+        uri: http://localhost:8890/ribbon/hello
+        predicates:
+        - Path=/zzzgd/** # 请求地址携带zzzgd的,则转发
+      # 路由到其他服务,url需要用[lb://]+[serviceId]
+      - id: spring-cloud-ribbon
+        uri: lb://spring-cloud-ribbon
+        predicates:
+        - Path=/to_client/** # 如果请求地址满足/to_client/**,则转发到 service-client 服务
+        filters:
+        - StripPrefix=1 # 去除请求地址中的to_client
+      - id: after_route
+        uri: http://baidu.com
+        predicates:
+        - After=2019-01-01T17:42:47.789-07:00[America/Denver] # 如果请求时间大于该时间,则转发
+server:
+  port: 15000
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8888/eureka/
+logging:
+  level:
+    org.springframework.cloud.gateway: TRACE
+    org.springframework.http.server.reactive: DEBUG
+    org.springframework.web.reactive: DEBUG
+    reactor.ipc.netty: DEBUG
